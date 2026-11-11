@@ -89,6 +89,7 @@ button{font:inherit;cursor:pointer}
 .kaynak.bitti{background:transparent}
 .kaynak.bitti .metin{opacity:.5}
 .bos{border:1px dashed #56628c;border-radius:14px;padding:26px 18px;color:var(--muted);text-align:center}
+.bilgi{color:var(--muted);font-size:.875rem;margin:0 0 14px}
 .not{color:var(--warn);font-size:.875rem;margin:0 0 14px}
 @media (prefers-reduced-motion:reduce){.konu{transition:none}}
 .anahtar-dugme{background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:.35rem .9rem;font-size:.875rem}
@@ -112,9 +113,9 @@ button{font:inherit;cursor:pointer}
 </section>
 
 <section id="konular" class="ic" hidden>
-  <div class="ust-satir"><a class="geri" href="#">← Dünyaya dön</a><button class="anahtar-dugme" id="anahtarAc" type="button">Anahtar gir</button></div>
+  <div class="ust-satir"><a class="geri" href="#">← Dünyaya dön</a><button class="anahtar-dugme" id="anahtarAc" type="button">Sahip girişi</button></div>
   <div id="anahtarKutu" hidden>
-    <p>Tik atmak için GitHub erişim anahtarını (token) bu cihaza bir kez gir. Anahtar yalnızca bu tarayıcıda saklanır ve yalnızca GitHub'a gönderilir.</p>
+    <p>Bu bölüm site sahibi içindir. Ziyaretçiysen anahtara gerek yok: tiklerin bu cihazda kendiliğinden saklanır. Sahip, GitHub erişim anahtarını (token) girerse tikleri bütün cihazlarında ortak olur.</p>
     <form id="anahtarForm"><input id="anahtarGiris" type="password" autocomplete="off" placeholder="github_pat_…" aria-label="GitHub erişim anahtarı"><button type="submit">Kaydet</button></form>
     <p id="anahtarDurum"></p>
     <button id="anahtarSil" type="button" hidden>Anahtarı bu cihazdan sil</button>
@@ -128,6 +129,7 @@ button{font:inherit;cursor:pointer}
   <a class="geri" href="#konular">← Konu başlıkları</a>
   <div class="bas"><h1 id="konuAd"></h1><div class="sayac" id="konuSayac"></div></div>
   <p class="not" id="not2" hidden></p>
+  <p class="bilgi" id="bilgi"></p>
   <ul class="liste" id="kaynaklar"></ul>
 </section>
 
@@ -144,6 +146,9 @@ var konular=[], kaynaklar=[], tikler={}, tikSha=null, hazir=false, notMetni="", 
 function sirala(a,b){return (a.sira||0)-(b.sira||0)||String(a.ad).localeCompare(String(b.ad),"tr")}
 function notYaz(t){notMetni=t;["not1","not2"].forEach(function(i){$(i).textContent=t;$(i).hidden=!t})}
 function anahtar(){try{return localStorage.getItem("gelisim-anahtar")||""}catch(e){return ""}}
+var YEREL="gelisim-tikler-yerel", yerel={};
+try{yerel=JSON.parse(localStorage.getItem(YEREL)||"{}")||{}}catch(e){yerel={}}
+function aktif(){return anahtar()?tikler:yerel}
 function basliklar(){var h={"Accept":"application/vnd.github+json"},a=anahtar();if(a)h.Authorization="Bearer "+a;return h}
 function coz(b64){return JSON.parse(decodeURIComponent(escape(atob(String(b64).replace(/\s/g,"")))))}
 function kodla(o){return btoa(unescape(encodeURIComponent(JSON.stringify(o,null,1)+"\n")))}
@@ -163,13 +168,13 @@ function tikHatasi(e){
 fetch("veri.json",{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error(String(r.status));return r.json()}).then(function(v){
   konular=(v.konular||[]).slice().sort(sirala);kaynaklar=(v.kaynaklar||[]).slice().sort(sirala);hazir=true;ciz();
 }).catch(function(){hazir=true;notYaz("Liste yüklenemedi. Sayfayı yenile.");ciz()});
-tikleriGetir().then(ciz,tikHatasi);
+if(anahtar())tikleriGetir().then(ciz,tikHatasi);
 document.addEventListener("visibilitychange",function(){
-  if(document.visibilityState==="visible"&&!yaziyor&&Date.now()-sonOkuma>90000)tikleriGetir().then(ciz,function(){});
+  if(document.visibilityState==="visible"&&anahtar()&&!yaziyor&&Date.now()-sonOkuma>90000)tikleriGetir().then(ciz,function(){});
 });
 
 function el(etiket,sinif,metin){var e=document.createElement(etiket);if(sinif)e.className=sinif;if(metin!=null)e.textContent=metin;return e}
-function say(liste){return {bitti:liste.filter(function(k){return tikler[k.id]}).length,hepsi:liste.length}}
+function say(liste){return {bitti:liste.filter(function(k){return aktif()[k.id]}).length,hepsi:liste.length}}
 function sayacYaz(hedef,s){hedef.textContent="";var b=el("b",null,s.bitti);hedef.append(b," / "+s.hepsi+" bitti")}
 
 // Başlık simgeleri: konu belgesindeki "simge" alanı buradan bir anahtar seçer; yoksa baş harf gösterilir
@@ -207,10 +212,11 @@ function cizListe(konuId){
   $("konuAd").textContent=k?k.ad:(hazir?"Başlık bulunamadı":"Yükleniyor…");
   var benim=kaynaklar.filter(function(x){return x.konu===konuId});
   sayacYaz($("konuSayac"),say(benim));
+  $("bilgi").textContent=anahtar()?"Tiklerin GitHub'a kaydedilir, bütün cihazlarında ortaktır.":"Bitirdiğini işaretle. Tiklerin bu cihazda saklanır, sonraki gelişinde hatırlanır.";
   var ul=$("kaynaklar");ul.textContent="";
   if(!benim.length){var li=el("li","bos",hazir?"Bu başlıkta henüz kaynak yok.":"Kaynaklar yükleniyor…");ul.append(li);return}
   benim.forEach(function(r){
-    var bitti=!!tikler[r.id],li=el("li","kaynak"+(bitti?" bitti":""));
+    var bitti=!!aktif()[r.id],li=el("li","kaynak"+(bitti?" bitti":""));
     var kutu=el("input");kutu.type="checkbox";kutu.id="tik-"+r.id;kutu.checked=bitti;
     kutu.setAttribute("aria-label",(r.ad||"Kaynak")+" bitti");
     kutu.addEventListener("change",function(){isaretle(r.id,kutu.checked,kutu)});
@@ -234,7 +240,11 @@ function cizListe(konuId){
 }
 
 function isaretle(id,deger,kutu){
-  if(!anahtar()){kutu.checked=!deger;notYaz("Tik atmak için önce Konu başlıkları ekranındaki Anahtar düğmesinden anahtarını gir.");return}
+  if(!anahtar()){
+    if(deger)yerel[id]=true;else delete yerel[id];
+    try{localStorage.setItem(YEREL,JSON.stringify(yerel));notYaz("")}catch(e){notYaz("Bu tarayıcı tikleri saklayamıyor. Gizli sekmedeysen normal sekmede aç.")}
+    ciz();return;
+  }
   if(yaziyor){kutu.checked=!deger;return}
   yaziyor=true;kutu.disabled=true;
   function dene(kalan){
@@ -256,8 +266,8 @@ function isaretle(id,deger,kutu){
 /* ---------- Anahtar ---------- */
 function anahtarDurum(){
   var var_=!!anahtar();
-  $("anahtarAc").textContent=var_?"Anahtar kayıtlı":"Anahtar gir";
-  $("anahtarDurum").textContent=var_?"Bu cihazda anahtar kayıtlı. Tik atabilirsin.":"Anahtar yok. Listeyi görürsün, tik atamazsın.";
+  $("anahtarAc").textContent=var_?"Sahip: açık":"Sahip girişi";
+  $("anahtarDurum").textContent=var_?"Bu cihazda anahtar kayıtlı. Tiklerin GitHub'a yazılır, bütün cihazlarında ortaktır.":"Anahtar yok. Tiklerin bu cihazda saklanır.";
   $("anahtarSil").hidden=!var_;
 }
 $("anahtarAc").addEventListener("click",function(){$("anahtarKutu").hidden=!$("anahtarKutu").hidden;if(!$("anahtarKutu").hidden)$("anahtarGiris").focus()});
@@ -270,7 +280,7 @@ $("anahtarForm").addEventListener("submit",function(e){
     else $("anahtarDurum").textContent="Anahtar kaydedildi ama şu an sınanamadı.";
   });
 });
-$("anahtarSil").addEventListener("click",function(){try{localStorage.removeItem("gelisim-anahtar")}catch(x){}anahtarDurum()});
+$("anahtarSil").addEventListener("click",function(){try{localStorage.removeItem("gelisim-anahtar")}catch(x){}notYaz("");anahtarDurum();ciz()});
 anahtarDurum();
 
 /* ---------- Ekranlar ---------- */
