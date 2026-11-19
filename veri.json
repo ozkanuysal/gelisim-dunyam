@@ -114,7 +114,8 @@
       "kisi": "Nevzat Tarhan",
       "tur": "kitap",
       "url": "",
-      "sira": 3
+      "sira": 3,
+      "kapak": "https://covers.openlibrary.org/b/id/12200535-M.jpg"
     }
   ]
 }

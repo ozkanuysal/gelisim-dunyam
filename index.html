@@ -80,6 +80,8 @@ button{font:inherit;cursor:pointer}
 .kapak img{width:100%;height:100%;object-fit:cover;display:block}
 .kapak::after{content:"";position:absolute;inset:0;margin:auto;width:0;height:0;border-style:solid;border-width:9px 0 9px 15px;border-color:transparent transparent transparent rgba(255,255,255,.92);filter:drop-shadow(0 1px 4px rgba(0,0,0,.7))}
 .kapak:hover{border-color:var(--glow)}
+.kapak.kitapk{width:clamp(60px,16vw,96px);aspect-ratio:2/3}
+.kapak.kitapk::after{display:none}
 .kaynak.bitti .kapak{opacity:.5}
 .metin{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .metin a,.metin .ad{color:var(--ink);font-weight:600;overflow-wrap:anywhere;text-decoration:none}
@@ -234,6 +236,9 @@ function cizListe(konuId){
     if(vm){
       var kp=el("a","kapak");kp.href=adres;kp.target="_blank";kp.rel="noopener";kp.setAttribute("aria-label",(r.ad||"Video")+" videosunu aç");
       var im=el("img");im.src="https://i.ytimg.com/vi/"+vm[1]+"/mqdefault.jpg";im.alt="";im.loading="lazy";kp.append(im);li.append(kp);
+    }else if(r.tur==="kitap"&&r.kapak&&/^https:\/\//.test(r.kapak)){
+      var kk=el("a","kapak kitapk");kk.href=adres;kk.target="_blank";kk.rel="noopener";kk.setAttribute("aria-label",(r.ad||"Kitap")+" kitabına git");
+      var ki=el("img");ki.src=r.kapak;ki.alt="";ki.loading="lazy";ki.onerror=function(){kk.remove()};kk.append(ki);li.append(kk);
     }
     li.append(m);ul.append(li);
   });
